@@ -2,13 +2,13 @@ const { PrismaClient } = require("@prisma/client");
 const express = require("express");
 const router = express.Router();
 
-router.get("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const prisma = new PrismaClient();
 
-    const user = prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: {
         email: email,
         password: password,

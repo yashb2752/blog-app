@@ -12,6 +12,7 @@
   "dependencies": {
     "@prisma/client": "^6.1.0",
     "blog-app": "file:",
+    "body-parser": "^1.20.3",
     "express": "^4.21.2",
     "prisma": "^6.1.0"
   },
