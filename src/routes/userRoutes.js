@@ -13,6 +13,11 @@ router.post("/login", async (req, res) => {
         email: email,
         password: password,
       },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
     });
 
     if (user == null) {
