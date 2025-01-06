@@ -5,9 +5,30 @@ const router = express.Router();
 
 router.get("/all", authMiddleware, async (req, res) => {
   try {
+    const query = req.query;
+
     const prisma = new PrismaClient();
 
-    const blogs = await prisma.blog.findMany();
+    let blogs;
+    if (!query.search || query.search.length == 0) {
+      blogs = await prisma.blog.findMany({
+        orderBy: {
+          updated_at: "desc",
+        },
+      });
+    } else {
+      blogs = await prisma.blog.findMany({
+        where: {
+          title: {
+            contains: query.search,
+            mode: "insensitive",
+          },
+        },
+        orderBy: {
+          updated_at: "desc",
+        },
+      });
+    }
 
     return res.status(200).json({
       data: blogs,
@@ -23,7 +44,8 @@ router.get("/all", authMiddleware, async (req, res) => {
 router.post("/create", authMiddleware, async (req, res) => {
   try {
     const { title, content } = req.body;
-    const userId = req.headers.userid;
+    const user = req.body.user;
+    const userId = user.id;
 
     if (title == null || content == null) {
       return res.status(500).json({
@@ -37,7 +59,7 @@ router.post("/create", authMiddleware, async (req, res) => {
       data: {
         title: title,
         content: content,
-        userId: parseInt(userId),
+        userId: userId,
       },
     });
 
@@ -96,47 +118,43 @@ router.get("/:blogid", async (req, res) => {
   }
 });
 
-router.put("/update/:blogid", async (req, res) => {
+router.put("/update/:blogid", authMiddleware, async (req, res) => {
   try {
-    const userId = req.headers.userid;
     const blogId = req.params.blogid;
     const { title, content } = req.body;
+    const user = req.body.user;
 
-    if (userId == null || blogId == null || title == null || content == null) {
+    if (blogId == null) {
       return res.status(500).json({
         message: "error while getting data",
       });
     }
     const prisma = new PrismaClient();
-    const user = await prisma.user.findUnique({
-      where: {
-        id: parseInt(userId),
-      },
-    });
-    if (user == null) {
-      return res.status(500).json({
-        message: "user not found",
-      });
-    }
-    const blog = await prisma.user.findUnique({
+
+    const blog = await prisma.blog.findFirst({
       where: {
         id: parseInt(blogId),
+        userId: user.id,
       },
     });
     if (blog == null) {
       return res.status(500).json({
-        message: "blog not found",
+        message: "blog not found for authenticated user",
       });
     }
-    const UpdatedBlog = await prisma.blog.update({
-      where: {
-        id: parseInt(blogId),
-      },
-      data: {
-        content: content,
-        title: title,
-      },
-    });
+
+    let updatedBlog;
+    if (title != null || content != null) {
+      updatedBlog = await prisma.blog.update({
+        where: {
+          id: parseInt(blogId),
+        },
+        data: {
+          title: title,
+          content: content,
+        },
+      });
+    }
 
     return res.status(200).json({
       message: "blog updated successfully",
